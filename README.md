@@ -1,2 +1,2 @@
-# GentooBackup
-backup of configuration files and scripts
+# Debian Daily Driver
+Initialize distro, patch configurations, basic security setup
