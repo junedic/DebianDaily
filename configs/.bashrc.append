@@ -1,0 +1,7 @@
+#
+# Use zsh as emulator shell
+#
+if [ -f "$(which zsh)" ]; then
+        export SHELL="$ZSHELL"
+        exec zsh
+fi
