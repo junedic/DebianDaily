@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# ==============================================================
+# ==============================================================================
 # Author: Julijan Nedic
 #
 # Description:
 # Automation script to perform the setup steps 
 # described in README.
-# ==============================================================
+# ==============================================================================
 
 USER="debian"
 SOURCES="/etc/apt/sources.list"
@@ -14,6 +14,8 @@ SOURCES="/etc/apt/sources.list"
 #
 # Logging
 #
+LOG="%s\n\n\n%s\n\n\n%s"
+
 VERIFICATION_LOG=$(cat << EOM
 # ==============================================================
 # Verification Log
@@ -27,18 +29,19 @@ INSTALL_LOG=$(cat << EOM
 # ==============================================================
 EOM
 )
-INSTALL_MSG_SUCC="\n[X] Sucessfully installed package "
-INSTALL_MSG_FAIL="\n[O] Failed to install package "
+INSTALL_MSG_SUCC="\n[+] Sucessfully installed package "
+INSTALL_MSG_FAIL="\n[-] Failed to install package "
 
 
 COMPONENT_LOG=$(cat << EOM
 # ==============================================================
 # Component Log
-# ==============================================================
+# ==============================================================\n
 EOM
 )
-COMPONENT_MSG="\n#\n#%s\n#\n"
-COMPONENT_MSG_INSTALL_FAIL=""
+COMPONENT_MSG_FAIL_INSTALL="\n[-] Failed to pull necessary packages to \
+    initialize %s"
+COMPONENT_MSG_SUCC="\n[+] Successfully initialized %s"
 
 #
 # Packages
@@ -50,21 +53,23 @@ PKG_NETWORK=("systemd-resolved")
 PKG_APP=("firefox-esr" "code")
 PKG_TOOL=("nmap")
 
-# ==============================================================
+# ==============================================================================
 # Helper functions
-# ==============================================================
+# ==============================================================================
 
 #
 # Verify if a package has been installed
 #
 _verify_package()
 {
+    result=0
     pkg="$1"
     if which "$pkg" > /dev/null 2>&1 || dpkg -s "$pkg" > /dev/null 2>&1; then
-        return 0
+        :
     else
-        return 1
+        result=1
     fi
+    return result
 }
 
 #
@@ -73,7 +78,7 @@ _verify_package()
 _install_packages()
 {
     packages="$@"       # combine arguments into array
-    installFailure=0    # inform about failed installation without aborting
+    result=0            # inform about failed installation without aborting
 	apt-get update
 	for pkg in $packages; do
 		apt-get install $pkg
@@ -81,10 +86,10 @@ _install_packages()
             INSTALL_LOG+="$INSTALL_MSG_SUCC $pkg"
         else
             INSTALL_LOG+="$INSTALL_MSG_FAIL $pkg"
-            $installFailure=1
+            result=1
         fi
 	done
-    return $installFailure
+    return result
 }
 
 #
@@ -92,34 +97,36 @@ _install_packages()
 #
 _comment_out_line()
 {
+    result=0
     file="$1"
     regex="$2"
     # entire command as string, otherwise error prone
     awk_check="awk '$regex {\$0 = \"#\" \$0} {print}' $file"
     commented=$(eval $awk_check)
     echo "$commented" > "$file"
-    return 0
+    return result
 }
 
-# ==============================================================
+# ==============================================================================
 # Verify installation
-# ==============================================================
+# ==============================================================================
 
 #
 # Verify and fix sources.list
 #
 verify_sources()
 {
-    sources="/etc/apt/sources.list"
-    regex_invalid_cdrom="(\$1 ~ /^deb/ && \$2 ~ /cdrom/)"   # check for iso as source
+    result=0
+    sources=$SOURCES
+    regex_invalid_cdrom="(\$1 ~ /^deb/ && \$2 ~ /cdrom/)"   # check for iso
     regex_valid=""  # check if any valid sources exist
     if [ -f "$sources" ]; then
-        # remove cdrom source, to fix apt error (VM)
+    # remove cdrom source, to fix apt error (VM)
         _comment_out_line "$sources" "$regex_invalid_cdrom"
     else
-        return 1
+        result=1
     fi
-    return 0
+    return result
 }
 
 #
@@ -127,70 +134,105 @@ verify_sources()
 #
 verify_network()
 {
-    sources="/etc/apt/sources.list"
+    result=0
+    sources=$SOURCES
     # extract source urls
-    srcUrls=($(awk '{ if ($1 ~ /deb/ && $2 ~ /http:*/) print $2 }' /etc/apt/sources.list))
+    srcUrls=($(awk '{ if ($1 ~ /deb/ && $2 ~ /http:*/) print $2 }' \ 
+        /etc/apt/sources.list))
     # filter unique urls
     srcUrls=($(printf '%s\n' "${srcUrls[@]}" | sort -u))
     for url in $srcUrls; do
         # extract domain from url
         domain=$(printf "$url" | sed -e 's/[^/]*\/\/\([^@]*@\)\?\([^:/]*\).*/\2/')
         if ! nslookup $domain > /dev/null 2>&1; then    # check dns resolution
-            return 1
+            result=1
             if ! ping -c 5 $domain > /dev/null 2>&1; then   # check reachability
-                return 1
+                result=1
             fi
         fi
     done
-    return 0
+    return result
 }
 
-# ==============================================================
+# ==============================================================================
 # Initialize components (install, setup, configs)
-# ==============================================================
+# ==============================================================================
 
 #
-# Edit pki and sources for external software to be installed
+# Edit pki, sources and set up nix
 #
-init_sources()
+init_pkgmgmt()
 {
-    # vscode
-	wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
-	install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
-	echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | tee /etc/apt/sources.list.d/vscode.list > /dev/null
+    result=0
+    # add microsoft pki and sources (vscode)
+	wget -qO- https://packages.microsoft.com/keys/microsoft.asc | \
+        gpg --dearmor > packages.microsoft.gpg
+	install -D -o root -g root -m 644 packages.microsoft.gpg \ 
+        /etc/apt/keyrings/packages.microsoft.gpg
+	echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings\
+        /packages.microsoft.gpg] https://packages.microsoft.com/\
+            repos/code stable main" | \
+                tee /etc/apt/sources.list.d/vscode.list > /dev/null
 	rm -f packages.microsoft.gpg
-    return 0
+    # set up nix package manager
+    sh <(curl -L https://nixos.org/nix/install) --daemon
+    return result
 }
 
 init_de()
 {
-    if ! _install_packages "${PKG_DE[@]}"; then
-        return 1
+    result=0
+    if _install_packages "${PKG_DE[@]}"; then
+        update-alternatives --set x-terminal-emulator kitty
+        COMPONENT_LOG+=$(printf "$COMPONENT_MSG_SUCC" "DE")
+    else
+        COMPONENT_LOG+="$COMPONENT_MSG_FAIL_INSTALL DE"
+        result=1
     fi
-    update-alternatives --set x-terminal-emulator kitty
-    return 0
+    return result
 }
 
 init_shell()
 {
-    if ! _install_packages "${PKG_SHELL[@]}"; then
-        return 1
+    result=0
+    if _install_packages "${PKG_SHELL[@]}"; then
+	    command -v zsh | tee -a /etc/shells
+	    # create .zshrc config and install ohmyzsh
+	    touch ~/.zshrc
+	    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/\
+            master/tools/install.sh)"
+    else
+        COMPONENT_LOG+="$COMPONENT_MSG_FAIL_INSTALL SHELL"
+        result=1
     fi
-	command -v zsh | tee -a /etc/shells
-	# create .zshrc config and install ohmyzsh
-	touch ~/.zshrc
-	sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
+    return result
+}
+
+_init_security_sudo()
+{
+    result=0
+    user="$USER"
+    # Install and initialize sudo
+    if _install_packages "sudo"; then
+        adduser "$user" sudo
+    else
+        COMPONENT_LOG+="$COMPONENT_MSG_FAIL_INSTALL SUDO"
+        result=1
+    fi
+    return result
 }
 
 init_security()
 {
-    # Install and initialize sudo
-    user="$1"
-    if ! _install_packages "${PKG_SECURITY[@]}"; then
-        return 1
+    result=0
+    if ! (
+        _init_security_sudo || \
+        _init_security_selinux || \
+        _init_security_xx
+    ); then
+        result=1
     fi
-	adduser "$user" sudo
-	# Install and initialize x
+    return result
 }
 
 #
@@ -222,7 +264,7 @@ init_network()
     return 0
 }
 
-# ==============================================================
+# ==============================================================================
 
 main()
 {
