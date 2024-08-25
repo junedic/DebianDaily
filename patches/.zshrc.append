@@ -1,4 +1,5 @@
 alias ls="ls -l"
 alias ll="ls -la"
+alias grep="grep -H -n"
 alias reboot="systemctl reboot"
 alias shutdown="systemctl shutdown"
