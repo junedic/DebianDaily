@@ -7,7 +7,7 @@ Run the setup.sh script.
 
 ## Manual
 
-### 0. VM Settings
+### 0. Settings
 #### 0.1 VMware Fusion
 **Networking**
 - Bridged (WiFi or LAN) - issue with IPv6 for Auto
@@ -16,14 +16,12 @@ Run the setup.sh script.
 - Use full resolution for Retina display
 - Single Window: Stretch the virtual machine in the window
 - Full Screen: Resize the virtual machine to fit the screen
-#### 0.2 VMware Workstation
-**Networking**
-- Bridged (WiFi or LAN) - issue with IPv6 for Auto
 
-**Display**
-- Use full resolution for Retina display
-- Single Window: Stretch the virtual machine in the window
-- Full Screen: Resize the virtual machine to fit the screen
+#### 0.2 VMware Workstation
+// TODO
+
+#### 0.3 Native
+// TODO
 
 ### 1. Installation
 - Install without DE
