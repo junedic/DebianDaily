@@ -1,7 +1,11 @@
 # Debian Daily Driver
 Initialize distro, patch configurations, basic security setup
 
-Distribution: Debian
+## Automated
+
+Run the setup.sh script.
+
+## Manual
 
 ### 0. VM Settings
 #### 0.1 VMware Fusion
