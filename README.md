@@ -70,7 +70,7 @@ apt-get update
 # some basic tools
 apt-get install wget gpg curl git
 # network
-apt-get install systemd-resolved
+apt-get install systemd-resolved (Note: systemd-resolved config edit necessary=
 # desktop environment
 apt-get install xorg i3 kitty
 # shell
