@@ -1,0 +1,13 @@
+~/.config/picom.conf
+backend = "glx";
+
+opacity-rule = [
+  "80:class_g = 'Alacritty'"
+];
+
+blur-background = true;
+blur:
+{
+  method = "kernel";
+  kernel = "7x7box";
+}

@@ -1,5 +1,8 @@
+~/.zshrc
+PROMPT="%{$fg_bold[white]%}%n $(echo $PROMPT | sed 's/%c%/%~%/')"
 alias ls="ls -l"
 alias ll="ls -la"
 alias grep="grep -H -n"
 alias reboot="systemctl reboot"
 alias shutdown="systemctl shutdown"
+alias shell-security="nix-shell $NIX-ENV

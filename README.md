@@ -18,7 +18,8 @@ Run the setup.sh script.
 - Full Screen: Resize the virtual machine to fit the screen
 
 #### 0.2 VMware Workstation
-// TODO
+**Networking**
+- NAT
 
 #### 0.3 Native
 // TODO

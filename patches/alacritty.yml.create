@@ -1,0 +1,14 @@
+~/.config/alacritty/alacritty.yml
+shell:
+    program: "/usr/bin/zsh"
+font:
+    family: DejaVu Sans Mono
+    style: Book
+    bold_style: Bold
+    italic_style: Italic
+    # Point size of the font
+    size: 12.0
+window:
+    padding:
+       x: 10
+       y: 10

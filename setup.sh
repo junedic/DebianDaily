@@ -8,7 +8,7 @@
 # described in README.
 # ==============================================================================
 
-USER="$1"
+USER="ndc"
 STAGE="$2"
 SOURCES="/etc/apt/sources.list"
 
@@ -47,12 +47,12 @@ COMPONENT_MSG_SUCC="\n[+] Successfully initialized %s"
 #
 # Packages
 #
-PKG_DE=("xorg" "i3" "kitty")
+PKG_DE=("xorg" "i3" "alacritty")
 PKG_SHELL=("zsh")
 PKG_SECURITY=("sudo")
 PKG_NETWORK=("systemd-resolved")
 PKG_APP=("firefox-esr" "code")
-PKG_TOOL=("nmap")
+PKG_TOOL=("gcc", "make", "nmap")
 
 NIX_DIRS=(
         ["/home/$USER/git/kernels"]="nix/kernel-dev.shell.nix"
@@ -200,14 +200,9 @@ _init_pkgmgmt_sources()
 {
         # add microsoft pki and sources (vscode)
         # https://code.visualstudio.com/docs/setup/linux
-        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | \
-                gpg --dearmor > packages.microsoft.gpg
-        install -D -o root -g root -m 644 packages.microsoft.gpg \ 
-                /etc/apt/keyrings/packages.microsoft.gpg
-        echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings\
-            /packages.microsoft.gpg] https://packages.microsoft.com/\
-                repos/code stable main" | \
-                    tee /etc/apt/sources.list.d/vscode.list > /dev/null
+        wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
+        install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
+        echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | tee /etc/apt/sources.list.d/vscode.list > /dev/null
         rm -f packages.microsoft.gpg
 }
 
@@ -243,7 +238,7 @@ init_de()
 {
         result=0
         if _install_packages "${PKG_DE[@]}"; then
-                update-alternatives --set x-terminal-emulator kitty
+                update-alternatives --set x-terminal-emulator alacritty
                 COMPONENT_LOG+=$(printf "$COMPONENT_MSG_SUCC" "DE")
         else
                 COMPONENT_LOG+=$(printf "$COMPONENT_MSG_FAIL_INSTALL" "DE")
@@ -259,8 +254,7 @@ init_shell()
                 command -v zsh | tee -a /etc/shells
                 # create .zshrc config and install ohmyzsh
                 touch ~/.zshrc
-                sh -c "$(curl -fsSL https://raw.githubusercontent.com/\
-                    ohmyzsh/ohmyzsh/master/tools/install.sh)"
+                sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
         else
                 COMPONENT_LOG+=$(printf "$COMPONENT_MSG_FAIL_INSTALL" "SHELL")
                 result=1
@@ -274,7 +268,7 @@ _init_security_sudo()
         user="$USER"
         # Install and initialize sudo
         if _install_packages "sudo"; then
-                adduser "$user" sudo
+                usermod -a -G sudo "$user"
         else
                 COMPONENT_LOG+=$(printf "$COMPONENT_MSG_FAIL_INSTALL" "sudo")
                 result=1
